@@ -1,0 +1,25 @@
+{
+  "name": "sprintforge-ai",
+  "version": "1.0.0",
+  "description": "PRD to Sprint Planner - Full-Stack Workflow Automation Platform",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "keywords": [
+    "prd",
+    "sprint-planner",
+    "workflow-automation",
+    "ai",
+    "smart-logic"
+  ],
+  "author": "SprintForge Team",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
