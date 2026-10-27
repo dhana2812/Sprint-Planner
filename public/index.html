@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SprintForge AI | Autonomous PRD & Sprint Architecture Pipeline</title>
+  <meta name="description" content="Convert feature ideas into structured PRD documents, atomic user stories, prioritized engineering tasks with RICE scoring, and capacity-balanced sprint roadmaps.">
+  <meta name="keywords" content="PRD, Sprint Planning, Agile, AI Workflow, Task Decomposition, RICE Score, Dependency DAG">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-info">
+        <h1>SprintForge AI</h1>
+        <p>Autonomous PRD & Sprint Architecture Pipeline</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" aria-label="Main Navigation">
+      <button class="nav-tab-btn active" id="nav-btn-studio">
+        <span>🚀</span> Studio & Workspace
+      </button>
+      <button class="nav-tab-btn" id="nav-btn-admin">
+        <span>📊</span> Admin & Monitoring
+      </button>
+    </nav>
+
+    <!-- Header Actions & Status -->
+    <div class="header-actions">
+      <div class="system-status-pill" id="system-status-badge">
+        <span class="pulse-dot"></span>
+        <span>Engine Active • SQLite Ready</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- ====================================================================
+         VIEW 1: STUDIO & PLANNER WORKSPACE
+         ==================================================================== -->
+    <section class="view-section active" id="view-studio">
+
+      <!-- Hero Input Studio -->
+      <div class="studio-hero">
+        <div class="hero-header">
+          <div class="hero-badge">⚡ Full-Stack Decision Automation</div>
+          <h2 class="hero-title">Synthesize Ideas into Engineering Sprints</h2>
+          <p class="hero-desc">
+            Transform high-level feature ideas into production-ready PRDs, Gherkin user stories, RICE-prioritized engineering tasks, and capacity-balanced sprint roadmaps with topological dependency resolution.
+          </p>
+        </div>
+
+        <!-- Preset Quick Selectors -->
+        <div class="presets-container">
+          <div class="presets-label">
+            <span>✨ Quick Start Architectural Presets:</span>
+          </div>
+          <div class="preset-chips" id="presets-chips-box">
+            <!-- Dynamic Presets Loaded by JS -->
+          </div>
+        </div>
+
+        <!-- Input Form -->
+        <form id="studio-form">
+          <div class="form-group">
+            <label for="input-prompt" class="form-label">
+              Feature Concept & Objectives <span style="color:var(--accent-rose);">*</span>
+            </label>
+            <textarea
+              id="input-prompt"
+              class="form-textarea"
+              placeholder="e.g., AI-powered Customer Support Copilot with real-time sentiment analysis, ticket auto-routing, response draft synthesis, and supervisor escalation..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="input-audience" class="form-label">Target Audience / Stakeholders</label>
+              <input
+                type="text"
+                id="input-audience"
+                class="form-input"
+                placeholder="e.g., Enterprise support directors & Tier 1 agents"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="input-tech-stack" class="form-label">Technical Stack & Preferences</label>
+              <input
+                type="text"
+                id="input-tech-stack"
+                class="form-input"
+                placeholder="e.g., Node.js, PostgreSQL + pgvector, Redis, React"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="input-risk" class="form-label">Risk Tolerance & Buffering</label>
+              <select id="input-risk" class="form-select">
+                <option value="Balanced" selected>Balanced (Standard Estimates)</option>
+                <option value="Conservative">Conservative (+25% Testing Buffer)</option>
+                <option value="Aggressive">Aggressive (Lean / Fast Prototype)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="background:var(--bg-secondary); padding:1rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle); margin-bottom:1.5rem;">
+            <label for="input-velocity" class="form-label" style="display:flex; justify-content:space-between;">
+              <span>Sprint Team Velocity Capacity (Story Points / 2-Week Sprint)</span>
+              <span class="range-badge" id="velocity-val-badge">30 pts</span>
+            </label>
+            <div class="range-wrap">
+              <span style="font-size:0.75rem; color:var(--text-muted);">15 pts (Small)</span>
+              <input type="range" id="input-velocity" class="form-range" min="15" max="60" step="5" value="30">
+              <span style="font-size:0.75rem; color:var(--text-muted);">60 pts (Large)</span>
+            </div>
+          </div>
+
+          <div class="form-footer">
+            <div style="font-size:0.8rem; color:var(--text-muted);">
+              🔒 Evaluated through Multi-Stage Heuristic & LLM Pipeline • Auto-saved to SQLite
+            </div>
+            <button type="submit" class="btn-primary" id="btn-submit-generate">
+              <span>⚡</span> Synthesize PRD & Plan Sprints
+            </button>
+          </div>
+        </form>
+
+        <!-- Generation Progress Stepper -->
+        <div class="generation-progress-box" id="generation-stepper">
+          <div style="font-size:0.85rem; font-weight:700; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+            <span>Processing Autonomous Pipeline...</span>
+            <span style="color:var(--accent-cyan); font-family:var(--font-mono); font-size:0.75rem;">Stage Execution</span>
+          </div>
+          <div class="stepper-track">
+            <div class="step-item" id="step-1">
+              <span class="step-indicator">1</span>
+              <span>Domain Analysis</span>
+            </div>
+            <div class="step-item" id="step-2">
+              <span class="step-indicator">2</span>
+              <span>PRD Synthesis</span>
+            </div>
+            <div class="step-item" id="step-3">
+              <span class="step-indicator">3</span>
+              <span>Task Breakdown</span>
+            </div>
+            <div class="step-item" id="step-4">
+              <span class="step-indicator">4</span>
+              <span>RICE & DAG Logic</span>
+            </div>
+            <div class="step-item" id="step-5">
+              <span class="step-indicator">5</span>
+              <span>Sprint Bin-Packing</span>
+            </div>
+            <div class="step-item" id="step-6">
+              <span class="step-indicator">6</span>
+              <span>DB Persistence</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workspace Output Container (Shows active PRD & Sprints) -->
+      <div class="workspace-wrapper" id="workspace-wrapper">
+
+        <!-- Top Summary Banner -->
+        <div class="workspace-banner">
+          <div class="banner-left">
+            <span class="banner-domain-tag" id="banner-domain">Enterprise AI</span>
+            <h3 class="banner-title" id="banner-title">Feature Blueprint Title</h3>
+            <div class="banner-meta">
+              <span id="banner-target">Target: Mid-Enterprise</span>
+              <span>•</span>
+              <span id="banner-tech">Stack: Node.js, SQLite</span>
+            </div>
+          </div>
+
+          <div class="banner-stat-pills">
+            <div class="stat-pill">
+              <span class="stat-pill-label">Total Effort</span>
+              <span class="stat-pill-value" id="stat-total-points">56</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-pill-label">Sprints</span>
+              <span class="stat-pill-value" id="stat-sprints-count">4</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-pill-label">Critical Path</span>
+              <span class="stat-pill-value" id="stat-critical-path" style="color:var(--accent-amber);">23 pts</span>
+            </div>
+          </div>
+
+          <div class="banner-actions">
+            <div>
+              <label for="workflow-status-select" style="font-size:0.68rem; color:var(--text-muted); display:block; font-weight:700; text-transform:uppercase;">Workflow Status</label>
+              <select id="workflow-status-select" class="status-dropdown">
+                <option value="Draft">Draft</option>
+                <option value="In Review">In Review</option>
+                <option value="Approved">Approved</option>
+                <option value="In Sprint">In Sprint</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+
+            <!-- Export Buttons Dropdown / Row -->
+            <div style="display:flex; gap:0.4rem; align-items:flex-end;">
+              <button class="btn-secondary" id="export-md-btn" title="Export PRD as Markdown">
+                <span>📄</span> Markdown
+              </button>
+              <button class="btn-secondary" id="export-jira-btn" title="Export Tasks for Jira CSV import">
+                <span>🔷</span> Jira CSV
+              </button>
+              <button class="btn-secondary" id="export-linear-btn" title="Export Tasks for Linear CSV import">
+                <span>📐</span> Linear CSV
+              </button>
+              <button class="btn-secondary" id="export-json-btn" title="Export Raw JSON">
+                <span>{ }</span> JSON
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub Navigation Tabs -->
+        <nav class="workspace-tabs" aria-label="Workspace Tabs">
+          <button class="ws-tab-btn active" data-tab="prd">
+            <span>📄</span> 1. PRD Document
+          </button>
+          <button class="ws-tab-btn" data-tab="stories">
+            <span>📖</span> 2. User Stories & Criteria
+          </button>
+          <button class="ws-tab-btn" data-tab="tasks">
+            <span>📋</span> 3. Engineering Task Matrix (RICE)
+          </button>
+          <button class="ws-tab-btn" data-tab="sprints">
+            <span>🏃</span> 4. Sprint Execution Board
+          </button>
+          <button class="ws-tab-btn" data-tab="dag">
+            <span>🕸️</span> 5. Dependency Graph (DAG)
+          </button>
+        </nav>
+
+        <!-- SUB-TAB 1: PRD DOCUMENT -->
+        <div class="ws-tab-content active" id="tab-content-prd">
+          <div class="prd-doc-card" id="prd-content-area">
+            <div class="prd-header-row">
+              <div>
+                <span class="hero-badge">Product Requirement Document</span>
+                <h3 style="font-family:var(--font-display); font-size:1.5rem; font-weight:800; color:#fff; margin-top:0.3rem;">Official Product Specification</h3>
+              </div>
+              <button class="btn-secondary" id="copy-prd-btn">
+                <span>📋</span> Copy Markdown
+              </button>
+            </div>
+
+            <h4 class="prd-section-title">1. Executive Summary</h4>
+            <p class="prd-p" id="prd-exec-summary"></p>
+
+            <h4 class="prd-section-title">2. Problem Statement & Root Cause</h4>
+            <p class="prd-p" id="prd-problem-statement"></p>
+
+            <h4 class="prd-section-title">3. Target User Personas</h4>
+            <div class="personas-grid" id="prd-personas-container"></div>
+
+            <h4 class="prd-section-title">4. Functional Requirements & Scope</h4>
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width:100px;">Req ID</th>
+                    <th style="width:220px;">Title</th>
+                    <th style="width:120px;">Priority</th>
+                    <th>Functional Description</th>
+                    <th>Acceptance Criteria</th>
+                  </tr>
+                </thead>
+                <tbody id="prd-fr-tbody"></tbody>
+              </table>
+            </div>
+
+            <h4 class="prd-section-title">5. Non-Functional Specifications</h4>
+            <ul id="prd-nfr-list" style="list-style:none; padding-left:0; margin-bottom:1.5rem;"></ul>
+
+            <h4 class="prd-section-title">6. Success Metrics & KPIs</h4>
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Key Metric</th>
+                    <th>Current Baseline</th>
+                    <th>Target Goal</th>
+                    <th>Organizational Impact</th>
+                  </tr>
+                </thead>
+                <tbody id="prd-kpi-tbody"></tbody>
+              </table>
+            </div>
+
+            <h4 class="prd-section-title">7. Scope Boundaries</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:0.5rem;">
+              <div style="background:var(--bg-secondary); padding:1.25rem; border-radius:var(--radius-md); border:1px solid rgba(16, 185, 129, 0.2);">
+                <div style="font-weight:700; color:var(--accent-emerald); font-size:0.85rem; margin-bottom:0.6rem;">✓ IN SCOPE (V1 RELEASE)</div>
+                <ul id="prd-in-scope-list" class="criteria-list"></ul>
+              </div>
+              <div style="background:var(--bg-secondary); padding:1.25rem; border-radius:var(--radius-md); border:1px solid rgba(244, 63, 94, 0.2);">
+                <div style="font-weight:700; color:var(--accent-rose); font-size:0.85rem; margin-bottom:0.6rem;">✗ OUT OF SCOPE (DEFERRED TO V2)</div>
+                <ul id="prd-out-scope-list" class="criteria-list"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-TAB 2: USER STORIES -->
+        <div class="ws-tab-content" id="tab-content-stories">
+          <div class="stories-grid" id="stories-grid-container"></div>
+        </div>
+
+        <!-- SUB-TAB 3: ENGINEERING TASK MATRIX -->
+        <div class="ws-tab-content" id="tab-content-tasks">
+          <div class="matrix-toolbar">
+            <input
+              type="text"
+              id="task-search"
+              class="search-box"
+              placeholder="🔍 Search tasks, descriptions, or IDs..."
+            >
+            <div class="filter-group">
+              <select id="task-category-filter" class="form-select" style="min-width:140px;">
+                <option value="All">All Categories</option>
+                <option value="Database">Database</option>
+                <option value="Backend">Backend</option>
+                <option value="Frontend">Frontend</option>
+                <option value="DevOps/Infra">DevOps/Infra</option>
+                <option value="QA/Testing">QA/Testing</option>
+              </select>
+
+              <select id="task-priority-filter" class="form-select" style="min-width:130px;">
+                <option value="All">All Priorities</option>
+                <option value="P0">P0 (Critical)</option>
+                <option value="P1">P1 (High)</option>
+                <option value="P2">P2 (Medium)</option>
+                <option value="P3">P3 (Low)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:110px;">Task ID</th>
+                  <th>Task Title & Scope</th>
+                  <th style="width:120px;">Category</th>
+                  <th style="width:130px;">Priority</th>
+                  <th style="width:130px;">Effort (pts/hrs)</th>
+                  <th style="width:160px;">RICE Score</th>
+                  <th style="width:150px;">Prerequisites</th>
+                  <th style="width:110px;">Sprint</th>
+                </tr>
+              </thead>
+              <tbody id="task-matrix-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUB-TAB 4: SPRINT BOARD -->
+        <div class="ws-tab-content" id="tab-content-sprints">
+          <div class="sprint-board-grid" id="sprint-board-container"></div>
+        </div>
+
+        <!-- SUB-TAB 5: DEPENDENCY DAG GRAPH -->
+        <div class="ws-tab-content" id="tab-content-dag">
+          <div class="dag-container">
+            <div class="dag-legend">
+              <div class="dag-legend-item">
+                <div class="legend-color-box" style="background:#8B5CF6;"></div>
+                <span>Database</span>
+              </div>
+              <div class="dag-legend-item">
+                <div class="legend-color-box" style="background:#06B6D4;"></div>
+                <span>Backend API</span>
+              </div>
+              <div class="dag-legend-item">
+                <div class="legend-color-box" style="background:#10B981;"></div>
+                <span>Frontend UI</span>
+              </div>
+              <div class="dag-legend-item">
+                <div class="legend-color-box" style="background:#F59E0B;"></div>
+                <span>DevOps / Infra</span>
+              </div>
+              <div class="dag-legend-item">
+                <div class="legend-color-box" style="background:#F43F5E;"></div>
+                <span>QA / Testing</span>
+              </div>
+              <div class="dag-legend-item" style="margin-left:auto;">
+                <div class="legend-color-box" style="background:#F59E0B; border:1px dashed #fff;"></div>
+                <strong style="color:#F59E0B;">Critical Path (Longest Path)</strong>
+              </div>
+            </div>
+
+            <!-- SVG Container -->
+            <svg id="dag-svg-canvas" class="svg-dag-canvas"></svg>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.75rem; text-align:center;">
+              Hover over any node to highlight immediate prerequisite & dependent flows. Click node to inspect details.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 2: ADMIN & MONITORING DASHBOARD
+         ==================================================================== -->
+    <section class="view-section" id="view-admin">
+      <div style="margin-bottom:2rem;">
+        <span class="hero-badge">System Observability & Governance</span>
+        <h2 class="hero-title">Platform Operations & Telemetry</h2>
+        <p class="hero-desc">Monitor system throughput, pipeline latency, task distributions, and fine-tune dynamic estimation weights live in SQLite.</p>
+      </div>
+
+      <!-- Metric Cards Grid -->
+      <div class="admin-metrics-grid">
+        <div class="metric-card">
+          <div class="metric-title">Total Workflows</div>
+          <div class="metric-value" id="m-total-workflows">0</div>
+          <div class="metric-sub">Generated & persisted</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Story Points Planned</div>
+          <div class="metric-value" id="m-total-points" style="color:var(--accent-cyan);">0</div>
+          <div class="metric-sub">Across all sprint roadmaps</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Avg Pipeline Latency</div>
+          <div class="metric-value" id="m-avg-latency" style="color:var(--accent-emerald);">0 ms</div>
+          <div class="metric-sub">End-to-end stage runtime</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Sprint Capacity Fill</div>
+          <div class="metric-value" id="m-avg-utilization" style="color:var(--accent-amber);">0%</div>
+          <div class="metric-sub">Bin-packing utilization</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="admin-charts-grid">
+        <div class="chart-card">
+          <h4 class="chart-title">Tasks by Architectural Category</h4>
+          <canvas id="chart-categories" class="chart-canvas"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4 class="chart-title">Priority Breakdown (P0 - P3)</h4>
+          <canvas id="chart-priorities" class="chart-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Live Dynamic Rule Tuner -->
+      <div class="rule-tuner-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h3 style="font-family:var(--font-display); font-size:1.2rem; color:#fff; font-weight:700;">Dynamic Logic & Scoring Rule Calibrator</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted);">Adjust RICE scoring multipliers and sprint capacity constraints live without restarting the server.</p>
+          </div>
+          <button class="btn-secondary" onclick="AdminDashboard.loadConfig()"><span>🔄</span> Refresh Rules</button>
+        </div>
+        <div class="rule-grid" id="rule-config-container">
+          <!-- Dynamically populated from SQLite system_config -->
+        </div>
+      </div>
+
+      <!-- Past Workflows Management Table -->
+      <div class="chart-card" style="margin-bottom:2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+          <h4 class="chart-title" style="margin-bottom:0;">Workflow Execution History & Status</h4>
+          <input
+            type="text"
+            class="search-box"
+            style="min-width:240px;"
+            placeholder="Filter past blueprints..."
+            oninput="AdminDashboard.loadWorkflowsTable(this.value)"
+          >
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:110px;">ID</th>
+                <th>Title</th>
+                <th style="width:120px;">Risk Profile</th>
+                <th style="width:90px;">Points</th>
+                <th style="width:140px;">Status</th>
+                <th style="width:160px;">Created At</th>
+                <th style="width:130px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-workflows-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Execution Stage Telemetry Logs -->
+      <div class="chart-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h4 class="chart-title" style="margin-bottom:0;">Recent Pipeline Execution Stage Logs</h4>
+          <button class="btn-secondary" style="font-size:0.75rem; padding:0.3rem 0.7rem;" onclick="AdminDashboard.loadLogs()">
+            <span>🔄</span> Refresh Logs
+          </button>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:120px;">Workflow ID</th>
+                <th>Pipeline Stage</th>
+                <th style="width:120px;">Engine</th>
+                <th style="width:120px;">Duration</th>
+                <th style="width:100px;">Status</th>
+                <th style="width:140px;">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="admin-logs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Task Detail Modal -->
+  <div id="task-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:1.5rem;">
+    <div style="background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); max-width:540px; width:100%; padding:2rem; box-shadow:var(--shadow-lg); position:relative; animation:fadeIn 0.2s ease;">
+      <button id="modal-close-btn" style="position:absolute; top:1.25rem; right:1.25rem; background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer;">&times;</button>
+      <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
+        <span id="modal-task-id" style="font-family:JetBrains Mono; color:var(--accent-cyan); font-weight:700; font-size:0.9rem;"></span>
+        <span id="modal-task-cat" class="badge badge-category"></span>
+      </div>
+      <h3 id="modal-task-title" style="font-family:var(--font-display); font-size:1.3rem; color:#fff; font-weight:700; margin-bottom:1rem;"></h3>
+      <p id="modal-task-desc" style="color:var(--text-secondary); font-size:0.9rem; line-height:1.6; margin-bottom:1.5rem;"></p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; background:var(--bg-primary); padding:1rem; border-radius:var(--radius-md); font-size:0.85rem; margin-bottom:1.25rem;">
+        <div>
+          <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Priority</span>
+          <strong id="modal-task-prio" style="color:#FFA502;"></strong>
+        </div>
+        <div>
+          <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Effort</span>
+          <strong id="modal-task-points" style="color:var(--accent-cyan);"></strong>
+        </div>
+        <div>
+          <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Critical Path Node</span>
+          <strong id="modal-task-critical" style="color:var(--accent-amber);"></strong>
+        </div>
+        <div>
+          <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Prerequisites</span>
+          <strong id="modal-task-deps" style="color:#CBD5E1;"></strong>
+        </div>
+      </div>
+
+      <div style="font-size:0.78rem; color:var(--text-muted);">
+        <strong style="color:var(--text-primary);">RICE Calculation:</strong> <span id="modal-task-rice"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript Modules -->
+  <script src="/js/api.js"></script>
+  <script src="/js/dagGraph.js"></script>
+  <script src="/js/adminDashboard.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
