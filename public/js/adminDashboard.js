@@ -16,10 +16,15 @@ const AdminDashboard = {
     try {
       const data = await API.fetchAdminMetrics();
 
-      document.getElementById('m-total-workflows').textContent = data.totalWorkflows || 0;
-      document.getElementById('m-total-points').textContent = data.totalStoryPoints || 0;
-      document.getElementById('m-avg-latency').textContent = `${data.avgDurationMs || 0} ms`;
-      document.getElementById('m-avg-utilization').textContent = `${data.avgUtilization || 0}%`;
+      const elWf = document.getElementById('m-total-workflows');
+      const elPts = document.getElementById('m-total-points');
+      const elLat = document.getElementById('m-avg-latency');
+      const elUtil = document.getElementById('m-avg-utilization');
+
+      if (elWf) elWf.textContent = data.totalWorkflows || 0;
+      if (elPts) elPts.textContent = data.totalStoryPoints || 0;
+      if (elLat) elLat.textContent = `${data.avgDurationMs || 0} ms`;
+      if (elUtil) elUtil.textContent = `${data.avgUtilization || 0}%`;
 
       this.renderCategoryChart(data.categoryDistribution || {});
       this.renderPriorityChart(data.priorityDistribution || {});
@@ -32,8 +37,9 @@ const AdminDashboard = {
     const canvas = document.getElementById('chart-categories');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width = canvas.parentElement.clientWidth;
-    const height = canvas.height = 200;
+    const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+    const width = canvas.width = Math.max(280, parentWidth);
+    const height = canvas.height = 220;
 
     ctx.clearRect(0, 0, width, height);
 
@@ -42,19 +48,24 @@ const AdminDashboard = {
     const maxVal = Math.max(...values, 1);
 
     const colors = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#F43F5E'];
-    const barWidth = Math.min(48, (width - 60) / labels.length - 15);
+    const barWidth = Math.min(42, Math.max(20, (width - 60) / labels.length - 16));
     const startX = 40;
+    const spacing = (width - 60) / Math.max(1, labels.length);
 
     labels.forEach((label, idx) => {
       const val = values[idx] || 0;
-      const barHeight = (val / maxVal) * (height - 60);
-      const x = startX + idx * ((width - 60) / labels.length);
-      const y = height - 35 - barHeight;
+      const barHeight = (val / maxVal) * (height - 70);
+      const x = startX + idx * spacing + (spacing - barWidth) / 2;
+      const y = height - 40 - barHeight;
 
-      // Bar
+      // Draw bar with safe roundRect fallback
       ctx.fillStyle = colors[idx % colors.length];
       ctx.beginPath();
-      ctx.roundRect(x, y, barWidth, Math.max(4, barHeight), 4);
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, barWidth, Math.max(4, barHeight), 4);
+      } else {
+        ctx.rect(x, y, barWidth, Math.max(4, barHeight));
+      }
       ctx.fill();
 
       // Value text
@@ -66,7 +77,8 @@ const AdminDashboard = {
       // Label text
       ctx.fillStyle = '#94A3B8';
       ctx.font = '10px Plus Jakarta Sans, sans-serif';
-      ctx.fillText(label.split('/')[0], x + barWidth / 2, height - 12);
+      const shortLabel = label.split('/')[0];
+      ctx.fillText(shortLabel, x + barWidth / 2, height - 14);
     });
   },
 
@@ -74,8 +86,9 @@ const AdminDashboard = {
     const canvas = document.getElementById('chart-priorities');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width = canvas.parentElement.clientWidth;
-    const height = canvas.height = 200;
+    const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+    const width = canvas.width = Math.max(280, parentWidth);
+    const height = canvas.height = 220;
 
     ctx.clearRect(0, 0, width, height);
 
@@ -93,10 +106,10 @@ const AdminDashboard = {
     }
 
     // Draw Donut Chart
-    const centerX = width / 2 - 50;
+    const centerX = Math.max(70, width / 2 - 55);
     const centerY = height / 2;
-    const radius = 65;
-    const innerRadius = 38;
+    const radius = Math.min(65, height / 2 - 20);
+    const innerRadius = Math.max(25, radius * 0.58);
 
     let startAngle = -Math.PI / 2;
 
@@ -121,9 +134,9 @@ const AdminDashboard = {
     ctx.fillText(total, centerX, centerY + 5);
 
     // Legend on Right
+    const legX = Math.max(centerX + radius + 25, width - 110);
     labels.forEach((label, idx) => {
-      const legX = width - 110;
-      const legY = 50 + idx * 26;
+      const legY = Math.max(30, centerY - 45 + idx * 26);
 
       ctx.fillStyle = colors[idx];
       ctx.fillRect(legX, legY, 10, 10);
@@ -163,7 +176,7 @@ const AdminDashboard = {
           <td style="color:#64748B; font-size:0.75rem;">${new Date(wf.created_at).toLocaleString()}</td>
           <td>
             <div style="display:flex; gap:0.4rem;">
-              <button class="btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" onclick="App.loadWorkflowById('${wf.id}')">View</button>
+              <button class="btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" onclick="App.loadWorkflowById('${wf.id}', true)">View</button>
               <button class="btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem; color:#F43F5E;" onclick="AdminDashboard.handleDeleteWorkflow('${wf.id}')">Delete</button>
             </div>
           </td>
@@ -179,6 +192,11 @@ const AdminDashboard = {
       await API.updateWorkflowStatus(id, status);
       App.showToast(`Updated workflow status to ${status}`, 'success');
       this.loadMetrics();
+      if (App.currentWorkflow && App.currentWorkflow.id === id) {
+        App.currentWorkflow.status = status;
+        const bannerStatus = document.getElementById('workflow-status-select');
+        if (bannerStatus) bannerStatus.value = status;
+      }
     } catch (err) {
       App.showToast('Failed to update status', 'error');
     }
@@ -189,6 +207,11 @@ const AdminDashboard = {
     try {
       await API.deleteWorkflow(id);
       App.showToast('Workflow blueprint deleted', 'success');
+      if (App.currentWorkflow && App.currentWorkflow.id === id) {
+        App.currentWorkflow = null;
+        const wrapper = document.getElementById('workspace-wrapper');
+        if (wrapper) wrapper.classList.remove('active');
+      }
       this.loadWorkflowsTable();
       this.loadMetrics();
       this.loadLogs();

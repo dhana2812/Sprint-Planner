@@ -42,17 +42,18 @@ const App = {
   activeFilterCategory: 'All',
   activeFilterPriority: 'All',
   taskSearchQuery: '',
+  selectedPresetIdx: null,
 
   async init() {
     this.bindEvents();
     this.renderPresets();
     this.handleRoute();
 
-    // Check if there is an existing workflow to load
+    // Check if there is an existing workflow to load (without auto-scrolling)
     try {
       const workflows = await API.fetchWorkflows({ limit: 1 });
       if (workflows && workflows.length > 0) {
-        await this.loadWorkflowById(workflows[0].id);
+        await this.loadWorkflowById(workflows[0].id, false, false);
       }
     } catch (e) {
       console.log('No existing workflows loaded initially.');
@@ -61,8 +62,27 @@ const App = {
 
   bindEvents() {
     // Navigation
-    document.getElementById('nav-btn-studio').addEventListener('click', () => this.switchView('studio'));
-    document.getElementById('nav-btn-admin').addEventListener('click', () => this.switchView('admin'));
+    document.getElementById('nav-btn-studio')?.addEventListener('click', () => this.switchView('studio'));
+    document.getElementById('nav-btn-admin')?.addEventListener('click', () => this.switchView('admin'));
+
+    // Hash change routing
+    window.addEventListener('hashchange', () => this.handleRoute());
+
+    // Window resize debounced re-render
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (window.location.hash === '#admin') {
+          AdminDashboard.loadMetrics();
+        } else if (this.currentWorkflow) {
+          const activeTab = document.querySelector('.ws-tab-btn.active')?.getAttribute('data-tab');
+          if (activeTab === 'dag') {
+            this.renderDAGGraph();
+          }
+        }
+      }, 250);
+    });
 
     // Velocity slider
     const velocitySlider = document.getElementById('input-velocity');
@@ -143,12 +163,22 @@ const App = {
     });
 
     // Copy PRD Markdown
-    document.getElementById('copy-prd-btn')?.addEventListener('click', () => {
+    document.getElementById('copy-prd-btn')?.addEventListener('click', async () => {
       if (!this.currentWorkflow) return;
+      try {
+        const res = await fetch(`/api/workflows/${this.currentWorkflow.id}/export/markdown`);
+        if (res.ok) {
+          const md = await res.text();
+          await navigator.clipboard.writeText(md);
+          this.showToast('PRD Markdown copied to clipboard!', 'success');
+          return;
+        }
+      } catch (err) {}
+
       const text = document.getElementById('prd-content-area')?.innerText;
       if (text) {
         navigator.clipboard.writeText(text);
-        this.showToast('PRD Markdown copied to clipboard!', 'success');
+        this.showToast('PRD content copied to clipboard!', 'success');
       }
     });
 
@@ -159,6 +189,14 @@ const App = {
     window.addEventListener('click', (e) => {
       const modal = document.getElementById('task-modal');
       if (e.target === modal) modal.style.display = 'none';
+    });
+
+    // ESC key closes modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('task-modal');
+        if (modal) modal.style.display = 'none';
+      }
     });
 
     // Global modal helper for SVG DAG
@@ -178,14 +216,18 @@ const App = {
     document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
 
     if (viewName === 'admin') {
-      document.getElementById('view-admin').classList.add('active');
-      document.getElementById('nav-btn-admin').classList.add('active');
-      window.location.hash = '#admin';
+      document.getElementById('view-admin')?.classList.add('active');
+      document.getElementById('nav-btn-admin')?.classList.add('active');
+      if (window.location.hash !== '#admin') {
+        window.location.hash = '#admin';
+      }
       AdminDashboard.init();
     } else {
-      document.getElementById('view-studio').classList.add('active');
-      document.getElementById('nav-btn-studio').classList.add('active');
-      window.location.hash = '#studio';
+      document.getElementById('view-studio')?.classList.add('active');
+      document.getElementById('nav-btn-studio')?.classList.add('active');
+      if (window.location.hash === '#admin') {
+        window.location.hash = '#studio';
+      }
     }
   },
 
@@ -194,22 +236,32 @@ const App = {
     if (!container) return;
 
     container.innerHTML = PRESETS.map((p, idx) => `
-      <button type="button" class="preset-chip" onclick="App.applyPreset(${idx})">
+      <button type="button" class="preset-chip ${this.selectedPresetIdx === idx ? 'active' : ''}" onclick="App.applyPreset(${idx})">
         <span>✨</span> ${p.title}
       </button>
     `).join('');
   },
 
   applyPreset(idx) {
+    this.selectedPresetIdx = idx;
+    this.renderPresets();
+
     const p = PRESETS[idx];
     if (!p) return;
 
-    document.getElementById('input-prompt').value = p.prompt;
-    document.getElementById('input-audience').value = p.audience;
-    document.getElementById('input-tech-stack').value = p.stack;
-    document.getElementById('input-velocity').value = p.velocity;
-    document.getElementById('velocity-val-badge').textContent = `${p.velocity} pts`;
-    document.getElementById('input-risk').value = p.risk;
+    const elPrompt = document.getElementById('input-prompt');
+    const elAudience = document.getElementById('input-audience');
+    const elStack = document.getElementById('input-tech-stack');
+    const elVelocity = document.getElementById('input-velocity');
+    const elBadge = document.getElementById('velocity-val-badge');
+    const elRisk = document.getElementById('input-risk');
+
+    if (elPrompt) elPrompt.value = p.prompt;
+    if (elAudience) elAudience.value = p.audience;
+    if (elStack) elStack.value = p.stack;
+    if (elVelocity) elVelocity.value = p.velocity;
+    if (elBadge) elBadge.textContent = `${p.velocity} pts`;
+    if (elRisk) elRisk.value = p.risk;
 
     this.showToast(`Applied preset: ${p.title}`, 'success');
   },
@@ -241,9 +293,7 @@ const App = {
     const stepIds = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6'];
     stepIds.forEach(id => {
       const el = document.getElementById(id);
-      if (el) {
-        el.className = 'step-item';
-      }
+      if (el) el.className = 'step-item';
     });
 
     let currentStep = 0;
@@ -251,14 +301,10 @@ const App = {
       if (currentStep < stepIds.length) {
         if (currentStep > 0) {
           const prev = document.getElementById(stepIds[currentStep - 1]);
-          if (prev) {
-            prev.className = 'step-item done';
-          }
+          if (prev) prev.className = 'step-item done';
         }
         const active = document.getElementById(stepIds[currentStep]);
-        if (active) {
-          active.className = 'step-item active';
-        }
+        if (active) active.className = 'step-item active';
         currentStep++;
       }
     }, 280);
@@ -277,7 +323,7 @@ const App = {
         progressBox.classList.remove('active');
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<span>⚡</span> Synthesize PRD & Plan Sprints';
-        this.renderWorkflow(workflow);
+        this.renderWorkflow(workflow, true);
         this.showToast('Workflow synthesized & saved to SQLite!', 'success');
       }, 400);
 
@@ -290,29 +336,38 @@ const App = {
     }
   },
 
-  async loadWorkflowById(id) {
+  async loadWorkflowById(id, shouldSwitchView = false, shouldScroll = true) {
     try {
       const workflow = await API.fetchWorkflowById(id);
-      this.renderWorkflow(workflow);
+      if (shouldSwitchView) {
+        this.switchView('studio');
+      }
+      this.renderWorkflow(workflow, shouldScroll);
     } catch (err) {
       console.error('Failed to load workflow:', err);
     }
   },
 
-  renderWorkflow(workflow) {
+  renderWorkflow(workflow, shouldScroll = true) {
+    if (!workflow) return;
     this.currentWorkflow = workflow;
     const wrapper = document.getElementById('workspace-wrapper');
+    if (!wrapper) return;
     wrapper.classList.add('active');
 
     // Banner elements
-    document.getElementById('banner-domain').textContent = workflow.prd.domainCategory || 'Feature Architecture';
-    document.getElementById('banner-title').textContent = workflow.title;
-    document.getElementById('banner-target').textContent = `Target: ${workflow.targetAudience || workflow.prd.targetAudience}`;
-    document.getElementById('banner-tech').textContent = `Stack: ${workflow.techStack || workflow.prd.techStack}`;
+    const prd = workflow.prd || {};
+    const metrics = workflow.metrics || {};
+    const sprints = Array.isArray(workflow.sprints) ? workflow.sprints : [];
 
-    document.getElementById('stat-total-points').textContent = workflow.metrics.totalPoints;
-    document.getElementById('stat-sprints-count').textContent = workflow.sprints.length;
-    document.getElementById('stat-critical-path').textContent = `${workflow.metrics.criticalPathPoints} pts`;
+    document.getElementById('banner-domain').textContent = prd.domainCategory || 'Feature Architecture';
+    document.getElementById('banner-title').textContent = workflow.title || 'Product Blueprint';
+    document.getElementById('banner-target').textContent = `Target: ${workflow.targetAudience || prd.targetAudience || 'General Users'}`;
+    document.getElementById('banner-tech').textContent = `Stack: ${workflow.techStack || prd.techStack || 'Node.js, SQLite'}`;
+
+    document.getElementById('stat-total-points').textContent = metrics.totalPoints || 0;
+    document.getElementById('stat-sprints-count').textContent = sprints.length;
+    document.getElementById('stat-critical-path').textContent = `${metrics.criticalPathPoints || 0} pts`;
 
     const statusSelect = document.getElementById('workflow-status-select');
     if (statusSelect) {
@@ -326,8 +381,10 @@ const App = {
     this.renderSprintBoard();
     this.renderDAGGraph();
 
-    // Scroll smoothly to workspace
-    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Scroll smoothly to workspace only when explicitly requested
+    if (shouldScroll) {
+      wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   },
 
   switchWorkspaceTab(tabId) {
@@ -341,20 +398,22 @@ const App = {
     if (activeContent) activeContent.classList.add('active');
 
     if (tabId === 'dag') {
-      this.renderDAGGraph();
+      // Delay slightly so layout calculates properly
+      setTimeout(() => this.renderDAGGraph(), 50);
     }
   },
 
   renderPRD() {
-    if (!this.currentWorkflow) return;
+    if (!this.currentWorkflow || !this.currentWorkflow.prd) return;
     const prd = this.currentWorkflow.prd;
 
-    document.getElementById('prd-exec-summary').textContent = prd.executiveSummary;
-    document.getElementById('prd-problem-statement').textContent = prd.problemStatement;
+    document.getElementById('prd-exec-summary').textContent = prd.executiveSummary || 'No executive summary provided.';
+    document.getElementById('prd-problem-statement').textContent = prd.problemStatement || 'No problem statement provided.';
 
     // Personas
     const personasContainer = document.getElementById('prd-personas-container');
-    personasContainer.innerHTML = prd.personas.map(p => `
+    const personas = Array.isArray(prd.personas) ? prd.personas : [];
+    personasContainer.innerHTML = personas.map(p => `
       <div class="persona-card">
         <div class="persona-name">${p.name}</div>
         <div class="persona-role">${p.role}</div>
@@ -365,14 +424,15 @@ const App = {
 
     // Functional Requirements Table
     const frTbody = document.getElementById('prd-fr-tbody');
-    frTbody.innerHTML = prd.functionalRequirements.map(fr => {
+    const reqs = Array.isArray(prd.functionalRequirements) ? prd.functionalRequirements : [];
+    frTbody.innerHTML = reqs.map(fr => {
       let badgeClass = 'badge-could';
       if (fr.priority === 'Must Have') badgeClass = 'badge-must';
       else if (fr.priority === 'Should Have') badgeClass = 'badge-should';
 
       return `
         <tr>
-          <td><span style="font-family:JetBrains Mono; font-weight:700; color:#06B6D4;">${fr.id}</span></td>
+          <td><span style="font-family:JetBrains Mono, monospace; font-weight:700; color:#06B6D4;">${fr.id}</span></td>
           <td style="font-weight:600; color:#fff;">${fr.title}</td>
           <td><span class="badge ${badgeClass}">${fr.priority}</span></td>
           <td style="color:#CBD5E1;">${fr.description}</td>
@@ -383,7 +443,8 @@ const App = {
 
     // Non-Functional Specs
     const nfrContainer = document.getElementById('prd-nfr-list');
-    nfrContainer.innerHTML = prd.nonFunctionalRequirements.map(nfr => `
+    const nfrs = Array.isArray(prd.nonFunctionalRequirements) ? prd.nonFunctionalRequirements : [];
+    nfrContainer.innerHTML = nfrs.map(nfr => `
       <li style="margin-bottom:0.6rem; color:#CBD5E1;">
         <strong style="color:#fff;">${nfr.category}:</strong> ${nfr.spec}
       </li>
@@ -391,7 +452,8 @@ const App = {
 
     // KPIs Table
     const kpiTbody = document.getElementById('prd-kpi-tbody');
-    kpiTbody.innerHTML = prd.kpis.map(k => `
+    const kpis = Array.isArray(prd.kpis) ? prd.kpis : [];
+    kpiTbody.innerHTML = kpis.map(k => `
       <tr>
         <td style="font-weight:700; color:#fff;">${k.metric}</td>
         <td style="color:#94A3B8;">${k.baseline}</td>
@@ -402,15 +464,17 @@ const App = {
 
     // Scope boundaries
     const inScopeList = document.getElementById('prd-in-scope-list');
-    inScopeList.innerHTML = prd.inScope.map(item => `<li>${item}</li>`).join('');
+    const inScope = Array.isArray(prd.inScope) ? prd.inScope : [];
+    inScopeList.innerHTML = inScope.map(item => `<li>${item}</li>`).join('');
 
     const outScopeList = document.getElementById('prd-out-scope-list');
-    outScopeList.innerHTML = prd.outOfScopeV1.map(item => `<li>${item}</li>`).join('');
+    const outScope = Array.isArray(prd.outOfScopeV1) ? prd.outOfScopeV1 : [];
+    outScopeList.innerHTML = outScope.map(item => `<li>${item}</li>`).join('');
   },
 
   renderUserStories() {
     if (!this.currentWorkflow) return;
-    const stories = this.currentWorkflow.stories;
+    const stories = Array.isArray(this.currentWorkflow.stories) ? this.currentWorkflow.stories : [];
     const container = document.getElementById('stories-grid-container');
 
     container.innerHTML = stories.map(s => `
@@ -427,7 +491,7 @@ const App = {
         </div>
         <div class="story-criteria-title">Acceptance Criteria (Gherkin):</div>
         <ul class="criteria-list">
-          ${s.acceptanceCriteria.map(c => `<li>${c}</li>`).join('')}
+          ${(s.acceptanceCriteria || []).map(c => `<li>${c}</li>`).join('')}
         </ul>
       </div>
     `).join('');
@@ -435,7 +499,7 @@ const App = {
 
   renderTaskMatrix() {
     if (!this.currentWorkflow) return;
-    const tasks = this.currentWorkflow.tasks;
+    const tasks = Array.isArray(this.currentWorkflow.tasks) ? this.currentWorkflow.tasks : [];
     const tbody = document.getElementById('task-matrix-tbody');
 
     const filtered = tasks.filter(t => {
@@ -450,16 +514,23 @@ const App = {
       return matchesSearch && matchesCat && matchesPrio;
     });
 
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:2rem; color:#64748B;">No tasks match the selected filter criteria.</td></tr>`;
+      return;
+    }
+
     tbody.innerHTML = filtered.map(t => {
       const prioClass = `badge-${t.priority.toLowerCase()}`;
       const deps = t.prerequisites && t.prerequisites.length > 0
-        ? t.prerequisites.map(d => `<span style="font-family:JetBrains Mono; color:#06B6D4; background:rgba(6, 182, 212, 0.1); padding:0.1rem 0.4rem; border-radius:3px; margin-right:3px;">${d}</span>`).join('')
-        : '<span style="color:#64748B;">None</span>';
+        ? t.prerequisites.map(d => `<span style="font-family:JetBrains Mono, monospace; color:#06B6D4; background:rgba(6, 182, 212, 0.1); padding:0.1rem 0.4rem; border-radius:3px; margin-right:3px; font-size:0.75rem;">${d}</span>`).join('')
+        : '<span style="color:#64748B; font-size:0.75rem;">None</span>';
+
+      const rice = t.rice || { score: '-', reach: '-', impact: '-', confidence: '-' };
 
       return `
-        <tr>
+        <tr onclick="App.openTaskModalById('${t.id}')" style="cursor:pointer;" title="Click to view task details">
           <td>
-            <span style="font-family:JetBrains Mono; font-weight:700; color:#fff;">${t.id}</span>
+            <span style="font-family:JetBrains Mono, monospace; font-weight:700; color:#fff;">${t.id}</span>
             ${t.isCriticalPath ? '<span class="badge badge-critical-path" style="margin-left:4px; font-size:0.65rem;">Critical</span>' : ''}
           </td>
           <td>
@@ -467,19 +538,19 @@ const App = {
             <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.2rem;">${t.description}</div>
           </td>
           <td><span class="badge badge-category">${t.category}</span></td>
-          <td><span class="badge ${prioClass}">${t.priority} • ${t.priorityLabel}</span></td>
+          <td><span class="badge ${prioClass}">${t.priority} • ${t.priorityLabel || ''}</span></td>
           <td>
             <div style="display:flex; align-items:center; gap:0.4rem;">
-              <strong style="color:#06B6D4; font-family:JetBrains Mono;">${t.storyPoints} pts</strong>
+              <strong style="color:#06B6D4; font-family:JetBrains Mono, monospace;">${t.storyPoints} pts</strong>
               <span style="color:#64748B; font-size:0.75rem;">(${t.estimatedHours}h)</span>
             </div>
           </td>
           <td>
-            <div style="font-family:JetBrains Mono; font-size:0.8rem; color:#10B981; font-weight:700;">
-              ${t.rice.score}
+            <div style="font-family:JetBrains Mono, monospace; font-size:0.8rem; color:#10B981; font-weight:700;">
+              ${rice.score}
             </div>
             <div style="font-size:0.68rem; color:#64748B;">
-              R:${t.rice.reach} | I:${t.rice.impact} | C:${t.rice.confidence}%
+              R:${rice.reach} | I:${rice.impact} | C:${rice.confidence}%
             </div>
           </td>
           <td>${deps}</td>
@@ -491,13 +562,15 @@ const App = {
 
   renderSprintBoard() {
     if (!this.currentWorkflow) return;
-    const sprints = this.currentWorkflow.sprints;
+    const sprints = Array.isArray(this.currentWorkflow.sprints) ? this.currentWorkflow.sprints : [];
     const container = document.getElementById('sprint-board-container');
 
     container.innerHTML = sprints.map(sprint => {
       let fillClass = 'fill-safe';
       if (sprint.risk === 'High') fillClass = 'fill-high';
       else if (sprint.risk === 'Moderate') fillClass = 'fill-moderate';
+
+      const sprintTasks = Array.isArray(sprint.tasks) ? sprint.tasks : [];
 
       return `
         <div class="sprint-column">
@@ -521,16 +594,16 @@ const App = {
           </div>
 
           <div class="sprint-tasks-list" style="display:flex; flex-direction:column; gap:0.75rem;">
-            ${sprint.tasks.map(t => `
-              <div class="sprint-task-card" onclick="App.openTaskModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">
+            ${sprintTasks.map(t => `
+              <div class="sprint-task-card" onclick="App.openTaskModalById('${t.id}')">
                 <div class="sprint-task-header">
-                  <span style="font-family:JetBrains Mono; font-size:0.75rem; font-weight:700; color:#06B6D4;">${t.id}</span>
+                  <span style="font-family:JetBrains Mono, monospace; font-size:0.75rem; font-weight:700; color:#06B6D4;">${t.id}</span>
                   <span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span>
                 </div>
                 <div class="sprint-task-title">${t.title}</div>
                 <div class="sprint-task-footer">
                   <span class="badge badge-category">${t.category}</span>
-                  <strong style="color:#fff; font-family:JetBrains Mono;">${t.storyPoints} pts</strong>
+                  <strong style="color:#fff; font-family:JetBrains Mono, monospace;">${t.storyPoints} pts</strong>
                 </div>
               </div>
             `).join('')}
@@ -544,7 +617,15 @@ const App = {
     if (!this.currentWorkflow) return;
     const svg = document.getElementById('dag-svg-canvas');
     if (svg) {
-      renderDAG(svg, this.currentWorkflow.tasks, this.currentWorkflow.metrics.criticalPathTasks || []);
+      renderDAG(svg, this.currentWorkflow.tasks, this.currentWorkflow.metrics?.criticalPathTasks || []);
+    }
+  },
+
+  openTaskModalById(taskId) {
+    if (!this.currentWorkflow || !Array.isArray(this.currentWorkflow.tasks)) return;
+    const task = this.currentWorkflow.tasks.find(t => t.id === taskId);
+    if (task) {
+      this.openTaskModal(task);
     }
   },
 
@@ -556,9 +637,11 @@ const App = {
     document.getElementById('modal-task-title').textContent = task.title;
     document.getElementById('modal-task-desc').textContent = task.description;
     document.getElementById('modal-task-cat').textContent = task.category;
-    document.getElementById('modal-task-prio').textContent = `${task.priority} (${task.priorityLabel})`;
+    document.getElementById('modal-task-prio').textContent = `${task.priority} (${task.priorityLabel || ''})`;
     document.getElementById('modal-task-points').textContent = `${task.storyPoints} pts (${task.estimatedHours} hours)`;
-    document.getElementById('modal-task-rice').textContent = `Score: ${task.rice.score} (Reach: ${task.rice.reach}, Impact: ${task.rice.impact}, Confidence: ${task.rice.confidence}%, Effort: ${task.rice.effort})`;
+
+    const rice = task.rice || { score: '-', reach: '-', impact: '-', confidence: '-', effort: '-' };
+    document.getElementById('modal-task-rice').textContent = `Score: ${rice.score} (Reach: ${rice.reach}, Impact: ${rice.impact}, Confidence: ${rice.confidence}%, Effort: ${rice.effort})`;
     document.getElementById('modal-task-deps').textContent = task.prerequisites && task.prerequisites.length > 0 ? task.prerequisites.join(', ') : 'None (Root Node)';
     document.getElementById('modal-task-critical').textContent = task.isCriticalPath ? 'YES (On Critical Path)' : 'No';
 
