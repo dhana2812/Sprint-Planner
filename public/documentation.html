@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SprintForge AI — System Architecture & Project Documentation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0F172A;
+      --accent: #0284C7;
+      --accent-purple: #7C3AED;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --bg-alt: #F8FAFC;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background: #FFFFFF;
+      line-height: 1.6;
+      padding: 2.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Print specific styles */
+    @media print {
+      body {
+        padding: 0;
+        max-width: 100%;
+        color: #000;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      a {
+        text-decoration: none;
+        color: #000;
+      }
+      table, pre, blockquote, .card {
+        page-break-inside: avoid;
+      }
+      @page {
+        margin: 1.5cm;
+        size: A4;
+      }
+    }
+
+    /* Floating Print Banner on Screen */
+    .print-banner {
+      background: linear-gradient(135deg, #0284C7, #7C3AED);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+    }
+    .print-banner button {
+      background: #FFFFFF;
+      color: #0F172A;
+      border: none;
+      padding: 0.6rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+    .print-banner button:hover {
+      background: #F1F5F9;
+      transform: translateY(-1px);
+    }
+
+    /* Typography & Headers */
+    .doc-header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .doc-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      background: #E0F2FE;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+    .doc-sub {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-top: 2rem;
+      margin-bottom: 0.85rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+      color: #334155;
+    }
+
+    ul, ol {
+      margin-bottom: 1.25rem;
+      padding-left: 1.5rem;
+      font-size: 0.95rem;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 0.35rem;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25rem 0 1.75rem 0;
+      font-size: 0.88rem;
+    }
+    th {
+      background: var(--bg-alt);
+      color: var(--primary);
+      font-weight: 700;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+    }
+    td {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      color: #334155;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td {
+      background: #FAFAFA;
+    }
+
+    /* Code Blocks */
+    pre {
+      background: #0F172A;
+      color: #F8FAFC;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 1.2rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 1rem 0 1.5rem 0;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background: #F1F5F9;
+      color: #0F172A;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Cards & Boxes */
+    .card {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+    .badge-blue { background: #E0F2FE; color: #0284C7; }
+    .badge-green { background: #DCFCE7; color: #16A34A; }
+    .badge-purple { background: #F3E8FF; color: #7C3AED; }
+
+    .formula-box {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-left: 4px solid #16A34A;
+      padding: 1rem 1.25rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #14532D;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Screen Print Button -->
+  <div class="print-banner no-print">
+    <div>
+      <h3 style="color:#fff; margin:0; font-size:1.1rem;">📄 Ready to Export as PDF</h3>
+      <p style="color:#E0F2FE; margin:0; font-size:0.85rem;">Click the button below or press <strong>Ctrl + P</strong> to save as a clean PDF.</p>
+    </div>
+    <button onclick="window.print()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+      Print / Save as PDF
+    </button>
+  </div>
+
+  <!-- Document Header -->
+  <header class="doc-header">
+    <span class="doc-badge">Assignment Deliverable • Track: Tech / Product</span>
+    <h1>SprintForge AI — PRD → Sprint Planner</h1>
+    <p class="doc-sub">Autonomous Full-Stack Workflow Automation Platform & System Architecture Documentation</p>
+  </header>
+
+  <!-- Deliverables Matrix -->
+  <section>
+    <h2>📋 Submission Deliverables Summary</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:25%;">Deliverable</th>
+          <th>Link / Artifact</th>
+          <th style="width:25%;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>GitHub Repository</strong></td>
+          <td><a href="https://github.com/dhana2812/Sprint-Planner" target="_blank">https://github.com/dhana2812/Sprint-Planner</a></td>
+          <td><span class="badge badge-green">✓ Active (9 Commits)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Live Running App</strong></td>
+          <td><code>http://localhost:3000</code> (Studio) | <code>http://localhost:3000#admin</code> (Telemetry)</td>
+          <td><span class="badge badge-green">✓ Tested & Running</span></td>
+        </tr>
+        <tr>
+          <td><strong>Database Engine</strong></td>
+          <td>SQLite Relational DB (WAL Mode) with <code>data/sprintforge.db</code></td>
+          <td><span class="badge badge-green">✓ Persistent Storage</span></td>
+        </tr>
+        <tr>
+          <td><strong>Architecture Doc</strong></td>
+          <td>Comprehensive PDF Document (This file)</td>
+          <td><span class="badge badge-green">✓ Complete</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 1: System Architecture -->
+  <section>
+    <h2>1. System Architecture (System Thinking — 30%)</h2>
+    <p>
+      SprintForge AI is an end-to-end workflow automation platform that transforms raw, unstructured product feature ideas into structured Product Requirement Documents (PRDs), atomic User Stories with Gherkin acceptance criteria, prioritized engineering tasks with mathematical scoring, and capacity-balanced sprint roadmaps.
+    </p>
+
+    <h3>1.1 High-Level Architecture Diagram</h3>
+    <pre>
+┌────────────────────────────────────────────────────────────────────────┐
+│                   FRONTEND STUDIO & WORKSPACE (SPA)                    │
+│   • HTML5, Vanilla CSS3 (Obsidian Glassmorphism), ES6+ JavaScript      │
+│   • 4 Quick Architectural Presets | Interactive 5-Sub-View Studio      │
+│   • Admin Observability Telemetry & Dynamic Rule Calibrator            │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP REST (JSON)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                  BACKEND GATEWAY (Node.js & Express)                   │
+│   • 10 RESTful Endpoints (/api/workflows/*, /api/admin/*)              │
+│   • Input Validation & Error Boundaries                                │
+│   • Export Engine (Markdown, Jira CSV, Linear CSV, JSON)               │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                6-STAGE MULTI-PIPELINE ORCHESTRATOR                     │
+│                                                                        │
+│  [Stage 1] Domain & Concept Analysis Engine (analyzer.js)              │
+│  [Stage 2] PRD Synthesis Engine (prdGenerator.js)                      │
+│  [Stage 3] Story & Task Decomposition Engine (taskEngine.js)           │
+│  [Stage 4] Smart Logic Layer: RICE Scoring & DAG Sort (smartLogic.js)  │
+│  [Stage 5] Capacity-Constrained Bin-Packing Allocator (sprintAlloc.js) │
+│  [Stage 6] Persistent Relational Storage & Telemetry (orchestrator.js)│
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ SQL Queries
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                    PERSISTENT RELATIONAL DATABASE                      │
+│   • SQLite Engine (sql.js pure WebAssembly, WAL mode emulation)        │
+│   • Tables: workflows | execution_logs | system_config                │
+│   • File: data/sprintforge.db                                          │
+└────────────────────────────────────────────────────────────────────────┘
+    </pre>
+
+    <h3>1.2 Data Flow Pipeline</h3>
+    <ol>
+      <li><strong>Structured Input</strong>: User supplies concept prompt, target audience, tech stack, sprint velocity (15–60 pts), and risk profile.</li>
+      <li><strong>Domain Analysis</strong>: Keyword scoring classifies the idea into one of 5 domains (AI/ML, FinTech, Collaboration, Security, SaaS).</li>
+      <li><strong>Decomposition</strong>: Generates 6 functional requirements (MoSCoW), 4 non-functional specs, 4 business KPIs, 5 Gherkin user stories, and 16 engineering tasks.</li>
+      <li><strong>Smart Logic Processing</strong>: RICE scoring calculates mathematical priority; Kahn's topological sort determines prerequisite DAG layers and critical path.</li>
+      <li><strong>Capacity Bin-Packing</strong>: Tasks are scheduled into 4 sequential thematic sprints respecting team velocity thresholds.</li>
+      <li><strong>Persistence & Telemetry</strong>: Blueprint state and per-stage latency logs are stored in SQLite.</li>
+    </ol>
+  </section>
+
+  <div class="page-break"></div>
+
+  <!-- Section 2: Frontend Implementation -->
+  <section>
+    <h2>2. Frontend Implementation (Integration — 20%)</h2>
+    <p>
+      The frontend is crafted in modern vanilla HTML5, CSS3, and ES6+ JavaScript without cumbersome framework dependencies, delivering instant loads and responsive performance.
+    </p>
+
+    <h3>2.1 Core User Interface Components</h3>
+    <ul>
+      <li><strong>Studio Input Form</strong>: Multi-parameter form featuring 4 instant architectural presets, slider control for team sprint velocity (15–60 story points), and a real-time 6-stage animated pipeline stepper.</li>
+      <li><strong>Top Summary Banner</strong>: Shows domain category, synthesized title, target audience, tech stack, total points, sprint counts, and an interactive lifecycle status dropdown (<code>Draft</code>, <code>In Review</code>, <code>Approved</code>, <code>In Sprint</code>, <code>Completed</code>).</li>
+      <li><strong>5 Sub-View Workspace Tabs</strong>:
+        <ol>
+          <li><strong>PRD Document</strong>: Executive summary, problem statement, personas (pain points vs desired outcomes), MoSCoW functional requirements table, non-functional specs, and KPI metrics.</li>
+          <li><strong>User Stories & Acceptance Criteria</strong>: Cards formatted with <code>AS A</code>, <code>I WANT TO</code>, <code>SO THAT</code> and syntax-highlighted Gherkin criteria (<code>Given</code>, <code>When</code>, <code>Then</code>, <code>And</code>).</li>
+          <li><strong>Engineering Task Matrix</strong>: Searchable, filterable table showing category, P0–P3 priority, story points, hours, RICE breakdown, and dependency chips. Clicking any row opens an inspection modal.</li>
+          <li><strong>Sprint Execution Board</strong>: Kanban-style sprint buckets balancing tasks into 4 sequential execution phases with animated velocity capacity meters.</li>
+          <li><strong>Interactive SVG Dependency DAG</strong>: Canvas rendering topological layers, Bézier curves, category nodes, phase guide markers, and critical path glowing nodes.</li>
+        </ol>
+      </li>
+      <li><strong>Export Engine Toolbar</strong>: Instant 1-click downloads for Markdown (<code>.md</code>), Jira CSV (<code>.csv</code>), Linear CSV (<code>.csv</code>), and raw JSON (<code>.json</code>).</li>
+    </ul>
+  </section>
+
+  <!-- Section 3: Smart Logic Layer -->
+  <section>
+    <h2>3. Backend Logic & Smart Logic Layer (Logic Layer — 15%)</h2>
+    <p>
+      SprintForge AI avoids being a simple chatbot wrapper by embedding an explicit mathematical and algorithmic decision-making pipeline:
+    </p>
+
+    <h3>3.1 Mathematical RICE Priority Scoring</h3>
+    <div class="formula-box">
+      RICE Score = (Reach × Impact × Confidence) / Effort
+    </div>
+    <ul>
+      <li><strong>Reach (1–10)</strong>: Quantifies the volume of users or system touchpoints impacted.</li>
+      <li><strong>Impact (1–10)</strong>: Strategic business leverage rating.</li>
+      <li><strong>Confidence (50%–100%)</strong>: Confidence percentage in the architectural scope.</li>
+      <li><strong>Effort (Fibonacci)</strong>: Mapped to standard Fibonacci story points {1, 2, 3, 5, 8, 13} and converted to engineering hours (6 hrs/pt).</li>
+      <li><strong>Risk Tolerance Buffering</strong>:
+        <ul>
+          <li><em>Conservative</em>: Multiplies effort by 1.3 (+30% testing buffer).</li>
+          <li><em>Aggressive</em>: Multiplies effort by 0.8 (lean fast prototyping).</li>
+          <li><em>Balanced</em>: Standard 1.0 factor.</li>
+        </ul>
+      </li>
+      <li><strong>Priority Tier Mapping</strong>: Scores are sorted into quartile tiers: <code>P0 (Critical)</code>, <code>P1 (High)</code>, <code>P2 (Medium)</code>, <code>P3 (Low)</code>.</li>
+    </ul>
+
+    <h3>3.2 Topological Sort & Critical Path DAG</h3>
+    <p>
+      Prerequisite task dependencies are parsed using <strong>Kahn's Topological Sorting Algorithm</strong>:
+    </p>
+    <ul>
+      <li>Builds in-degree tracking maps and outgoing adjacency lists.</li>
+      <li>Assigns topological layers (0 = root tasks, 1 = depends on root, etc.) and detects circular dependency cycles.</li>
+      <li>Calculates the <strong>Critical Path</strong>: the longest weighted path through the project to highlight bottleneck engineering tasks.</li>
+    </ul>
+
+    <h3>3.3 Capacity-Constrained Sprint Bin-Packing</h3>
+    <p>
+      Tasks are scheduled into 4 sequential sprints:
+      <code>Sprint 1: Foundations</code> &rarr; <code>Sprint 2: Core Logic</code> &rarr; <code>Sprint 3: Interactive Workspaces</code> &rarr; <code>Sprint 4: Hardening</code>.
+      Tasks are packed by layer ascending, then RICE score descending, ensuring prerequisite dependencies are never scheduled after dependent tasks and velocity capacity is strictly enforced.
+    </p>
+  </section>
+
+  <div class="page-break"></div>
+
+  <!-- Section 4: Database Design -->
+  <section>
+    <h2>4. Database Design (Database & Admin — 20%)</h2>
+    <p>
+      The platform integrates an embedded relational SQLite database with persistent disk storage at <code>data/sprintforge.db</code>.
+    </p>
+
+    <h3>4.1 Relational Schema</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Table Name</th>
+          <th>Primary Key</th>
+          <th>Columns & Responsibilities</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>workflows</code></td>
+          <td><code>id (TEXT)</code></td>
+          <td>Stores generated blueprints: <code>title</code>, <code>prompt</code>, <code>target_audience</code>, <code>tech_stack</code>, <code>team_velocity</code>, <code>risk_profile</code>, <code>prd_data</code> (JSON), <code>stories_data</code> (JSON), <code>tasks_data</code> (JSON), <code>sprints_data</code> (JSON), <code>metrics_data</code> (JSON), <code>status</code>, <code>created_at</code>.</td>
+        </tr>
+        <tr>
+          <td><code>execution_logs</code></td>
+          <td><code>id (INTEGER AUTO)</code></td>
+          <td>Tracks per-stage pipeline latency: <code>workflow_id</code>, <code>stage</code>, <code>engine</code>, <code>duration_ms</code>, <code>status</code>, <code>details</code> (JSON), <code>created_at</code>.</td>
+        </tr>
+        <tr>
+          <td><code>system_config</code></td>
+          <td><code>key (TEXT)</code></td>
+          <td>Dynamic configuration: <code>value</code>, <code>description</code>, <code>updated_at</code>. Seeds default velocity, RICE weights, and max sprint buckets.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 5: Admin Dashboard -->
+  <section>
+    <h2>5. Admin Dashboard Overview</h2>
+    <p>
+      Accessible at <code>http://localhost:3000#admin</code>, the admin observability suite provides complete system governance:
+    </p>
+    <ul>
+      <li><strong>Telemetry KPI Cards</strong>: Total Workflows, Total Story Points Planned, Average Pipeline Latency (ms), and Sprint Capacity Utilization (%).</li>
+      <li><strong>HTML5 Canvas Charts</strong>:
+        <ul>
+          <li><em>Tasks by Category</em>: Bar chart visualizing architectural distribution across Database, Backend, Frontend, DevOps, and QA.</li>
+          <li><em>Priority Breakdown</em>: Donut chart displaying P0 through P3 proportions.</li>
+        </ul>
+      </li>
+      <li><strong>Dynamic Rule Calibrator</strong>: Real-time configuration panel enabling administrators to adjust RICE scoring weights and team velocity capacity live without server restarts.</li>
+      <li><strong>Workflow Lifecycle Governance</strong>: Searchable table of past workflows with inline status updates, inspect triggers, and deletion actions.</li>
+      <li><strong>Execution Stage Audit Logs</strong>: Granular latency feed showing each execution stage duration in milliseconds.</li>
+    </ul>
+  </section>
+
+  <!-- Section 6: Git Progression -->
+  <section>
+    <h2>6. Git Commit Progression (Version Control — 10%)</h2>
+    <p>
+      The project demonstrates a disciplined, stage-by-stage engineering progression tracking 9 atomic commits:
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:15%;">Commit</th>
+          <th style="width:40%;">Message</th>
+          <th>Stage Scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>7327646</code></td>
+          <td><code>feat(stage-1): initialize project structure and SQLite persistent storage layer</code></td>
+          <td>Scaffolding, schema definitions, db.js, package.json</td>
+        </tr>
+        <tr>
+          <td><code>a9eb0c8</code></td>
+          <td><code>feat(stage-2): implement AI/rule engine, RICE scoring, DAG dependency detection, sprint bin packing, and REST API</code></td>
+          <td>Domain analyzer, PRD generator, task engines, smart logic, API routes</td>
+        </tr>
+        <tr>
+          <td><code>c5de311</code></td>
+          <td><code>feat(stage-3): build modern dark-mode frontend, PRD viewer, stories, task matrix, and interactive sprint board</code></td>
+          <td>Interactive SPA, forms, presets, 4 output tabs, responsive layout</td>
+        </tr>
+        <tr>
+          <td><code>8704569</code></td>
+          <td><code>feat(stage-4): implement interactive SVG dependency DAG, admin monitoring dashboard, canvas charts, and telemetry</code></td>
+          <td>SVG DAG canvas, admin controllers, canvas charts, execution log viewer</td>
+        </tr>
+        <tr>
+          <td><code>bd780eb</code></td>
+          <td><code>feat(stage-5): end-to-end integration, dynamic rule tuner, and comprehensive documentation</code></td>
+          <td>System integration, exporters (MD/Jira/Linear), dynamic config tuner</td>
+        </tr>
+        <tr>
+          <td><code>3e4d034</code></td>
+          <td><code>feat(stage-6): production hardening with zero-dependency sql.js engine and cloud deployment config</code></td>
+          <td>WebAssembly SQLite compatibility, zero C++ compiler dependency, render.yaml</td>
+        </tr>
+        <tr>
+          <td><code>61babc0</code></td>
+          <td><code>fix(ui): polish UI glitches, fix DAG graph scrolling, canvas fallback, and table interactivity</code></td>
+          <td>DAG horizontal scroll, table row click inspection, canvas resize fallback</td>
+        </tr>
+        <tr>
+          <td><code>6ab0a03</code></td>
+          <td><code>style(ui): elevate design system with deep obsidian aesthetic, sleek glassmorphism, and Gherkin syntax tags</code></td>
+          <td>Obsidian design system, Gherkin syntax tag highlighting, GitHub button</td>
+        </tr>
+        <tr>
+          <td><code>bb292ba</code></td>
+          <td><code>docs: add comprehensive project documentation for assignment submission</code></td>
+          <td>Complete project documentation covering all 6 rubric areas</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Footer -->
+  <footer style="margin-top:3rem; padding-top:1.5rem; border-top:1px solid var(--border); font-size:0.8rem; color:var(--text-muted); text-align:center;">
+    SprintForge AI • Autonomous PRD & Sprint Architecture Pipeline • Developed for Assignment Submission
+  </footer>
+
+</body>
+</html>
