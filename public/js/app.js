@@ -477,6 +477,13 @@ const App = {
     const stories = Array.isArray(this.currentWorkflow.stories) ? this.currentWorkflow.stories : [];
     const container = document.getElementById('stories-grid-container');
 
+    const formatGherkin = (criterion) => {
+      return criterion.replace(
+        /^(Given|When|Then|And|But)\b/i,
+        '<span class="gherkin-tag">$1</span>'
+      );
+    };
+
     container.innerHTML = stories.map(s => `
       <div class="story-card">
         <div class="story-header">
@@ -485,13 +492,13 @@ const App = {
         </div>
         <div class="story-title">${s.title}</div>
         <div class="story-user-statement">
-          <strong>As a</strong> ${s.role},<br>
-          <strong>I want to</strong> ${s.action},<br>
-          <strong>So that</strong> ${s.benefit}.
+          <span class="statement-part"><strong>AS A</strong> ${s.role}</span>
+          <span class="statement-part"><strong>I WANT TO</strong> ${s.action}</span>
+          <span class="statement-part"><strong>SO THAT</strong> ${s.benefit}</span>
         </div>
         <div class="story-criteria-title">Acceptance Criteria (Gherkin):</div>
         <ul class="criteria-list">
-          ${(s.acceptanceCriteria || []).map(c => `<li>${c}</li>`).join('')}
+          ${(s.acceptanceCriteria || []).map(c => `<li>${formatGherkin(c)}</li>`).join('')}
         </ul>
       </div>
     `).join('');

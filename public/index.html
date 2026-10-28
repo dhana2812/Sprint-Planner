@@ -20,9 +20,16 @@
   <!-- App Header -->
   <header class="app-header">
     <div class="brand-container">
-      <div class="brand-icon">⚡</div>
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </div>
       <div class="brand-info">
-        <h1>SprintForge AI</h1>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <h1>SprintForge AI</h1>
+          <span class="version-tag">v1.2</span>
+        </div>
         <p>Autonomous PRD & Sprint Architecture Pipeline</p>
       </div>
     </div>
@@ -30,10 +37,12 @@
     <!-- Navigation Tabs -->
     <nav class="nav-tabs" aria-label="Main Navigation">
       <button class="nav-tab-btn active" id="nav-btn-studio">
-        <span>🚀</span> Studio & Workspace
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19 21 12 17 5 21 12 2"></polygon></svg>
+        <span>Studio & Workspace</span>
       </button>
       <button class="nav-tab-btn" id="nav-btn-admin">
-        <span>📊</span> Admin & Monitoring
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <span>Admin & Telemetry</span>
       </button>
     </nav>
 
@@ -41,8 +50,14 @@
     <div class="header-actions">
       <div class="system-status-pill" id="system-status-badge">
         <span class="pulse-dot"></span>
-        <span>Engine Active • SQLite Ready</span>
+        <span>Decision Engine Active</span>
       </div>
+      <a href="https://github.com/dhana2812/Sprint-Planner" target="_blank" rel="noopener" class="header-github-btn" title="View Source on GitHub">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span>GitHub</span>
+      </a>
     </div>
   </header>
 
