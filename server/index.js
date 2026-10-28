@@ -33,11 +33,16 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`===============================================`);
-  console.log(`🚀 SprintForge AI Engine running on port ${PORT}`);
-  console.log(`📍 Web UI: http://localhost:${PORT}`);
-  console.log(`📊 Admin:  http://localhost:${PORT}#admin`);
-  console.log(`===============================================`);
+// Start server after DB is ready
+db.dbReady.then(() => {
+  app.listen(PORT, () => {
+    console.log(`===============================================`);
+    console.log(`🚀 SprintForge AI Engine running on port ${PORT}`);
+    console.log(`📍 Web UI: http://localhost:${PORT}`);
+    console.log(`📊 Admin:  http://localhost:${PORT}#admin`);
+    console.log(`===============================================`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
 });

@@ -1,4 +1,4 @@
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 
@@ -8,14 +8,136 @@ if (!fs.existsSync(dataDir)) {
 }
 
 const dbPath = path.join(dataDir, 'sprintforge.db');
-const db = new Database(dbPath);
 
-// Enable WAL mode for better concurrency and performance
-db.pragma('journal_mode = WAL');
+// ──────────────────────────────────────────────────
+// Compatibility wrapper: makes sql.js behave like
+// better-sqlite3's synchronous API so the rest of
+// the codebase doesn't need any changes.
+// ──────────────────────────────────────────────────
 
-// Initialize database schema
-function initDatabase() {
-  db.exec(`
+class StatementWrapper {
+  constructor(sqlDb, sql, dbWrapper) {
+    this.sqlDb = sqlDb;
+    this.sql = sql;
+    this.dbWrapper = dbWrapper;
+  }
+
+  run(...params) {
+    const bindParams = this._flattenParams(params);
+    this.sqlDb.run(this.sql, bindParams);
+    this.dbWrapper._save();
+    return { changes: this.sqlDb.getRowsModified() };
+  }
+
+  get(...params) {
+    const bindParams = this._flattenParams(params);
+    const stmt = this.sqlDb.prepare(this.sql);
+    if (bindParams.length > 0) stmt.bind(bindParams);
+    let row = undefined;
+    if (stmt.step()) {
+      row = stmt.getAsObject();
+    }
+    stmt.free();
+    return row;
+  }
+
+  all(...params) {
+    const bindParams = this._flattenParams(params);
+    const results = [];
+    const stmt = this.sqlDb.prepare(this.sql);
+    if (bindParams.length > 0) stmt.bind(bindParams);
+    while (stmt.step()) {
+      results.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return results;
+  }
+
+  _flattenParams(params) {
+    if (params.length === 0) return [];
+    if (params.length === 1 && Array.isArray(params[0])) return params[0];
+    return params;
+  }
+}
+
+class DatabaseWrapper {
+  constructor(sqlDb) {
+    this.sqlDb = sqlDb;
+  }
+
+  pragma(_pragmaStr) {
+    // WAL mode not supported in sql.js, silently ignored
+  }
+
+  exec(sql) {
+    this.sqlDb.run(sql);
+    this._save();
+  }
+
+  prepare(sql) {
+    return new StatementWrapper(this.sqlDb, sql, this);
+  }
+
+  transaction(fn) {
+    const self = this;
+    return function (...args) {
+      self.sqlDb.run('BEGIN TRANSACTION');
+      try {
+        const result = fn(...args);
+        self.sqlDb.run('COMMIT');
+        self._save();
+        return result;
+      } catch (e) {
+        self.sqlDb.run('ROLLBACK');
+        throw e;
+      }
+    };
+  }
+
+  _save() {
+    try {
+      const data = this.sqlDb.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(dbPath, buffer);
+    } catch (e) {
+      console.error('Failed to save database:', e.message);
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────
+// Async init + proxy so existing `const db = require('./db')`
+// calls continue to work with `db.prepare(...)` etc.
+// ──────────────────────────────────────────────────
+
+let realDb = null;
+
+// The proxy forwards all property access and method calls
+// to the real DatabaseWrapper once it's initialized.
+const dbProxy = new Proxy({}, {
+  get(_target, prop) {
+    if (prop === 'dbReady') return dbReadyPromise;
+    if (!realDb) throw new Error('Database not initialized yet. Await dbReady first.');
+    return typeof realDb[prop] === 'function'
+      ? realDb[prop].bind(realDb)
+      : realDb[prop];
+  }
+});
+
+const dbReadyPromise = initSqlJs().then((SQL) => {
+  let sqlDb;
+  if (fs.existsSync(dbPath)) {
+    const fileBuffer = fs.readFileSync(dbPath);
+    sqlDb = new SQL.Database(fileBuffer);
+  } else {
+    sqlDb = new SQL.Database();
+  }
+
+  realDb = new DatabaseWrapper(sqlDb);
+
+  realDb.pragma('journal_mode = WAL');
+
+  realDb.exec(`
     CREATE TABLE IF NOT EXISTS workflows (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -58,9 +180,9 @@ function initDatabase() {
   `);
 
   // Seed default configuration if empty
-  const count = db.prepare('SELECT COUNT(*) as count FROM system_config').get();
+  const count = realDb.prepare('SELECT COUNT(*) as count FROM system_config').get();
   if (count.count === 0) {
-    const insertConfig = db.prepare(
+    const insertConfig = realDb.prepare(
       'INSERT INTO system_config (key, value, description) VALUES (?, ?, ?)'
     );
     const defaults = [
@@ -73,15 +195,17 @@ function initDatabase() {
       ['engine_mode', 'hybrid', 'Active processing engine mode (hybrid, rule_only, llm_only)']
     ];
 
-    const transaction = db.transaction((items) => {
+    const transaction = realDb.transaction((items) => {
       for (const item of items) {
         insertConfig.run(item[0], item[1], item[2]);
       }
     });
     transaction(defaults);
   }
-}
 
-initDatabase();
+  realDb._save();
+  console.log('Database initialized successfully');
+  return realDb;
+});
 
-module.exports = db;
+module.exports = dbProxy;
